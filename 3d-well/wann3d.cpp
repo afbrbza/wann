@@ -22,6 +22,9 @@
 #include "TPZElementMatrixT.h"
 #include "TPZGenGrid2D.h"
 #include "TPZGeoMeshTools.h"
+#include "TPZHdivApproxCreator.h"
+#include "TPZLinearAnalysis.h"
+#include "TPZMultiphysicsCompMesh.h"
 #include "TPZRefPatternDataBase.h"
 #include "TPZRefPatternTools.h"
 #include "TPZSYSMPMatrix.h"
@@ -48,7 +51,8 @@ enum EMatid { ENone,
               ECurveWell,
               ECurveHeel,
               ECurveToe,
-              ESurfWellCylNonLin };
+              ESurfWellCylNonLin,
+              ECapRock };
 
 const int global_nthread = 8;
 
@@ -62,12 +66,13 @@ int main() {
 #endif
 
   const int nrefdirectional = 0;
-  const int nref = 1;
+  const int nref = 0;
+  const int pOrder = 1;
 
   // TPZGeoMesh* gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev04.msh");
   //   TPZGeoMesh* gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev05.msh");
   TPZGeoMesh *gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev06.msh");
-
+  const int dim = gmesh->Dimension();
   {
     std::ofstream out("gmeshorig.vtk");
     TPZVTKGeoMesh::PrintGMeshVTK(gmesh, out);
@@ -100,7 +105,59 @@ int main() {
     }
   }
 
-  delete gmesh;
+  // Create computational mesh for Darcy problem
+  TPZHDivApproxCreator hdivCreator(gmesh);
+  hdivCreator.ProbType() = ProblemType::EDarcy;
+  // hdivCreator.HdivFamily() = hdivfam;
+  // hdivCreator.IsRigidBodySpaces() = false;
+  hdivCreator.SetDefaultOrder(pOrder);
+  // hdivCreator.SetExtraInternalOrder(0);
+  hdivCreator.SetShouldCondense(true);
+  // hdivCreator.HybridType() = HybridizationType::ENone;
+
+  // Insert Materials
+  const int diri = 0, neu = 1, mixed = 2;
+  TPZMixedDarcyFlow *matdarcy = new TPZMixedDarcyFlow(EDomain, dim);
+  matdarcy->SetConstantPermeability(1.);
+  hdivCreator.InsertMaterialObject(matdarcy);
+
+  TPZFMatrix<STATE> val1(1, 1, 0.);
+  TPZManVector<STATE> val2(1, 1.);
+  TPZBndCondT<STATE> *BCond1 = matdarcy->CreateBC(matdarcy, EFarField, diri, val1, val2);
+  hdivCreator.InsertMaterialObject(BCond1);
+
+  val2[0] = 0.;
+  TPZBndCondT<STATE> *BCond2 = matdarcy->CreateBC(matdarcy, ESurfWellCyl, diri, val1, val2);
+  hdivCreator.InsertMaterialObject(BCond2);
+
+  TPZBndCondT<STATE> *BCond3 = matdarcy->CreateBC(matdarcy, ESurfHeel, neu, val1, val2);
+  hdivCreator.InsertMaterialObject(BCond3);
+
+  TPZBndCondT<STATE> *BCond4 = matdarcy->CreateBC(matdarcy, ESurfToe, neu, val1, val2);
+  hdivCreator.InsertMaterialObject(BCond4);
+
+  TPZMultiphysicsCompMesh *cmesh = hdivCreator.CreateApproximationSpace();
+
+  TPZLinearAnalysis analysis(cmesh);
+  TPZSSpStructMatrix<STATE> skylstr(cmesh);
+  analysis.SetStructuralMatrix(skylstr);
+
+  TPZStepSolver<STATE> step;
+  step.SetDirect(ELDLt);
+  analysis.SetSolver(step);
+
+  analysis.Run();
+
+  std::string filename = "solution";
+  TPZStack<std::string> fieldnames;
+  fieldnames.Push("Pressure");
+  fieldnames.Push("Flux");
+  TPZVTKGenerator vtkGen(cmesh, fieldnames, filename, 0);
+  vtkGen.SetNThreads(0);
+  vtkGen.Do();
+
+  // delete cmesh;
+  // delete gmesh;
   std::cout << "--------- Simulation finished ---------" << std::endl;
 }
 
@@ -118,6 +175,7 @@ ReadMeshFromGmsh(std::string file_name) {
     stringtoint[2]["surface_wellbore_heel"] = ESurfHeel;
     stringtoint[2]["surface_wellbore_toe"] = ESurfToe;
     stringtoint[2]["surface_farfield"] = EFarField;
+    stringtoint[2]["cap_rock"] = EFarField;
 
     stringtoint[1]["curve_wellbore"] = ECurveWell;
     stringtoint[1]["curve_heel"] = ECurveHeel;
@@ -186,7 +244,7 @@ void ModifyGeometricMeshToCylWell(TPZGeoMesh *gmesh) {
         // if(neigh.Element()->MaterialId() != EDomain) DebugStop();
         allneigh.Push(neigh);
       }
-      std::cout << "Element " << iel << " side " << iside << " has " << allneigh.size() << " neighbours" << std::endl;
+      //   std::cout << "Element " << iel << " side " << iside << " has " << allneigh.size() << " neighbours" << std::endl;
       for (auto it : allneigh) {
         TPZChangeEl::ChangeToGeoBlend(gmesh, it.Element()->Index());
       }
