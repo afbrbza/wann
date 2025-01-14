@@ -23,7 +23,7 @@
 #include "TPZElementMatrixT.h"
 #include "TPZGenGrid2D.h"
 #include "TPZGeoMeshTools.h"
-#include "TPZHdivApproxCreator.h"
+#include "TPZHDivApproxCreator.h"
 #include "TPZLagrangeMultiplierCS.h"
 #include "TPZLinearAnalysis.h"
 #include "TPZMultiphysicsCompMesh.h"
@@ -90,7 +90,9 @@ int main() {
 
   // TPZGeoMesh* gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev04.msh");
   //   TPZGeoMesh* gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev05.msh");
-  TPZGeoMesh *gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev06.msh");
+  // TPZGeoMesh* gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev06.msh");
+  TPZGeoMesh *gmesh = ReadMeshFromGmsh("../../geo/mesh3D_rev07.msh");
+
   const int dim = gmesh->Dimension();
   {
     std::ofstream out("gmeshorig.vtk");
