@@ -28,6 +28,7 @@
 #include "TPZVTKGeoMesh.h"
 #include "pzcmesh.h"
 #include "pzcompelwithmem.h"
+#include "pzfstrmatrix.h"
 #include "pzgmesh.h"
 #include "pzlog.h"
 #include "pzshapequad.h"
@@ -64,11 +65,13 @@ int main() {
   TPZLogger::InitializePZLOG();
 #endif
 
-  const int pord = 6;
-  const int nrefdirectional = 6;
+  const int pord = 5;
+  const int nrefdirectional = 3;
   REAL pff = 22064967.11, pheel = 11767982.46;
   const REAL Kres = 1.e-13;
-  const REAL wellR = 0.05;
+  // const REAL wellR = 0.0005;
+  // const REAL wellR = 0.001;
+  const REAL wellR = 0.005;
   const REAL mu = 0.005;
   REAL Kwell = M_PI * wellR * wellR * wellR * wellR / (8.0 * mu);
   //   Kwell = 1000*Kres;
@@ -96,7 +99,9 @@ int main() {
   // 3) Solve problem
   TPZLinearAnalysis an(cmeshH1);
   TPZStepSolver<STATE> step;
-  TPZSSpStructMatrix<STATE> strmat(cmeshH1);
+  // TPZSSpStructMatrix<STATE> strmat(cmeshH1);
+  // TPZFStructMatrix<STATE> strmat(cmeshH1);
+  TPZSkylineStructMatrix<STATE> strmat(cmeshH1);
   strmat.SetNumThreads(global_nthread);
   an.SetStructuralMatrix(strmat);
   step.SetDirect(ECholesky);
