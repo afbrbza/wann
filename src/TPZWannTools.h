@@ -6,6 +6,7 @@
 #include <Material/TPZLagrangeMultiplierCS.h>
 #include <Material/TPZNullMaterial.h>
 #include <Material/TPZNullMaterialCS.h>
+#include <Mesh/pzintel.h>
 #include <TPZCylinderMap.h>
 #include <TPZGeoMeshTools.h>
 #include <TPZGmshReader.h>
@@ -21,14 +22,28 @@
 #include <tpzchangeel.h>
 #include <tpzgeoelrefpattern.h>
 
-class TPZWannTools {
+class TPZWannGeometryTools {
+
 public:
   static TPZGeoMesh *CreateGeoMesh(ProblemData *simData);
+  static void InsertXCoorInSet(const REAL x, std::set<REAL> &nodeCoordsX, const REAL tol);
+  static REAL FindClosestX(const REAL x, const std::set<REAL> &nodeCoordsX, const REAL tol);
+
+private:
+  static TPZGeoMesh *ReadMeshFromGmsh(ProblemData *simData);
   static void ModifyGeometricMeshToCylWell(TPZGeoMesh *gmesh, ProblemData *SimData);
   static void CreatePressure2DElsAndOrderIds(TPZGeoMesh *gmesh, ProblemData *SimData);
+};
+
+class TPZWannApproxTools {
+
+public:
   static TPZMultiphysicsCompMesh *CreateMultiphysicsCompMesh(TPZGeoMesh *gmesh, ProblemData *SimData);
 
 private:
-  static void InsertXCoorInSet(const REAL x, std::set<REAL> &nodeCoordsX, const REAL tol);
-  static REAL FindClosestX(const REAL x, const std::set<REAL> &nodeCoordsX, const REAL tol);
+  static void AddPressureSkinElements(TPZCompMesh *cmesh, ProblemData *SimData, const int laglevel);
+  static void AddWellboreElements(TPZVec<TPZCompMesh *> &meshvec, ProblemData *SimData, const int laglevel);
+  static void EqualizePressureConnects(TPZCompMesh *cmesh, ProblemData *SimData);
+  static void AddHDivBoundInterfaceElements(TPZCompMesh *cmesh, ProblemData *SimData);
+  static void AddInterfaceElements(TPZMultiphysicsCompMesh *cmesh, ProblemData *SimData, const int laglevel);
 };
