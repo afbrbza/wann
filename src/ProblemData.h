@@ -38,6 +38,19 @@ class ProblemData {
     REAL length;
   };
 
+  struct FluidData {
+    REAL viscosity;
+    REAL density;
+  };
+
+  struct MeshData {
+    std::string file;
+    int NumUniformRef;
+    int NumDirRef;
+    int Resolution;
+    bool ToCylindrical;
+  };
+
 public:
   enum EMatid {
     ENone,
@@ -60,23 +73,15 @@ public:
 
   using json = nlohmann::json; // declaration of json class
 
-  std::string m_MeshName; // name of the mesh file
-
-  int m_Dimension; // dimension of the problem
-
-  int m_NumUniformRef; // number of uniform refinements
-
-  int m_NumDirRef; // number of directional refinements
-
-  int m_Resolution; // VTK mesh resolution
-
-  bool m_ToCylindrical; // whether to use cylyndrical map to the wellbore surface
-
   int m_Verbose; // verbosity level
 
   WellboreData m_Wellbore; // wellbore data
 
   ReservoirData m_Reservoir; // reservoir data
+
+  FluidData m_Fluid; // fluid data
+
+  MeshData m_Mesh; // mesh data
 
 public:
   ProblemData();
