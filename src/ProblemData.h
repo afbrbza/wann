@@ -7,38 +7,41 @@
 #include <pzfmatrix.h>
 #include <pzvec.h>
 #include <string>
+#include <unordered_map>
 
 // declaration of simulation data class.
 // all the data herein used are storaged in a .json file. It can be called and storaged using ReadJson
 
 class ProblemData {
   struct BoundaryData {
-    std::string name; // name of the bc
-    int matid;        // bc material ID
-    int type;         // bc type 0: direct, 1: neumann
-    REAL value;       // bc value
+    int matid;  // bc material ID
+    int type;   // bc type 0: direct, 1: neumann
+    REAL value; // bc value
   };
 
   struct DomainData {
-    std::string name;                  // name of the domain
-    int matid;                         // domain material ID
-    REAL perm;                         // domain permeability
-    REAL pOrder;                       // polynomial approximation order for flux
-    TPZManVector<BoundaryData, 5> BCs; // vector containing all the bcs info
+    std::string name;                                  // name of the domain
+    int matid;                                         // domain material ID
+    REAL perm;                                         // domain permeability
+    REAL pOrder;                                       // polynomial approximation order for flux
+    std::unordered_map<std::string, BoundaryData> BCs; // map containing all the bcs info
   };
 
   struct WellboreData : public DomainData {
-    REAL radius; // domain radius
-    REAL length; // domain length
+    REAL radius;       // domain radius
+    REAL length;       // domain length
+    REAL excentricity; // domain excentricity
   };
 
   struct ReservoirData : public DomainData {
     REAL height;
     REAL width;
     REAL length;
+    REAL porosity;
   };
 
   struct FluidData {
+    std::string name;
     REAL viscosity;
     REAL density;
   };
@@ -73,8 +76,6 @@ public:
 
   using json = nlohmann::json; // declaration of json class
 
-  int m_Verbose; // verbosity level
-
   WellboreData m_Wellbore; // wellbore data
 
   ReservoirData m_Reservoir; // reservoir data
@@ -82,6 +83,8 @@ public:
   FluidData m_Fluid; // fluid data
 
   MeshData m_Mesh; // mesh data
+
+  int m_VerbosityLevel; // verbosity level
 
 public:
   ProblemData();
