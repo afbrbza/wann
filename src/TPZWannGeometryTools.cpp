@@ -13,10 +13,11 @@ TPZGeoMesh *TPZWannGeometryTools::CreateGeoMesh(ProblemData *simData) {
     ModifyGeometricMeshToCylWell(gmesh, simData);
 
     // simData->m_Wellbore.BCs["point_heel"].value *= -1;
-  } else {
-    // Any ideia how to do this in a more elegant way? it seems that the cylindrical map changes normal vector orientation of some elements
-    simData->m_Wellbore.BCs["point_heel"].value *= -1;
   }
+  // else {
+  //   //Any ideia how to do this in a more elegant way? it seems that the cylindrical map changes normal vector orientation of some elements
+  //   simData->m_Wellbore.BCs["point_heel"].value *= -1;
+  // }
 
   if (simData->m_Mesh.NumUniformRef) {
     TPZCheckGeom checkgeom(gmesh);
@@ -40,7 +41,10 @@ TPZGeoMesh *TPZWannGeometryTools::CreateGeoMesh(ProblemData *simData) {
   }
 
   // Create GeoelBCs in same location as geoels with ESurfWell
-  CreatePressure2DElsAndOrderIds(gmesh, simData);
+  CreatePressure2DEls(gmesh, simData);
+
+  // Order nodes Id in the well according to the x-coordinate
+  OrderIds(gmesh, simData);
 
   return gmesh;
 }
@@ -180,7 +184,20 @@ void TPZWannGeometryTools::ModifyGeometricMeshToCylWell(TPZGeoMesh *gmesh, Probl
   }
 }
 
-void TPZWannGeometryTools::CreatePressure2DElsAndOrderIds(TPZGeoMesh *gmesh, ProblemData *SimData) {
+void TPZWannGeometryTools::CreatePressure2DEls(TPZGeoMesh *gmesh, ProblemData *SimData) {
+  const int nel = gmesh->NElements();
+  for (int64_t iel = 0; iel < nel; iel++) {
+    TPZGeoEl *gel = gmesh->Element(iel);
+    if (gel->MaterialId() != SimData->ESurfWellCyl) continue;
+    if (gel->HasSubElement()) continue;
+    // pressure2Dels.insert(iel);
+    TPZGeoElBC bc(gel, gel->NSides() - 1, SimData->EPressure2DSkin);
+    TPZGeoElBC bc2(gel, gel->NSides() - 1, SimData->EPressureInterface);
+    TPZGeoElBC bc3(gel, gel->NSides() - 1, SimData->EHDivBoundInterface);
+  }
+}
+
+void TPZWannGeometryTools::OrderIds(TPZGeoMesh *gmesh, ProblemData *SimData) {
   const int nel = gmesh->NElements();
   const REAL tol = 1.e-4;
   std::set<int64_t> pressure2Dels;
@@ -190,9 +207,6 @@ void TPZWannGeometryTools::CreatePressure2DElsAndOrderIds(TPZGeoMesh *gmesh, Pro
     if (gel->MaterialId() != SimData->ESurfWellCyl) continue;
     if (gel->HasSubElement()) continue;
     pressure2Dels.insert(iel);
-    TPZGeoElBC bc(gel, gel->NSides() - 1, SimData->EPressure2DSkin);
-    TPZGeoElBC bc2(gel, gel->NSides() - 1, SimData->EPressureInterface);
-    TPZGeoElBC bc3(gel, gel->NSides() - 1, SimData->EHDivBoundInterface);
     for (int i = 0; i < gel->NCornerNodes(); i++) {
       TPZManVector<REAL, 3> coor(3);
       gel->NodePtr(i)->GetCoordinates(coor);
@@ -212,14 +226,14 @@ void TPZWannGeometryTools::CreatePressure2DElsAndOrderIds(TPZGeoMesh *gmesh, Pro
     }
   }
 
-  int64_t maxid = gmesh->CreateUniqueNodeId();
   for (auto &it : xToNodes) {
     const REAL x = it.first;
     const auto &nodes = it.second;
     const int64_t nnodes = nodes.size();
     if (nnodes < 2) DebugStop();
     for (auto &node : nodes) {
-      gmesh->NodeVec()[node].SetNodeId(maxid++);
+      int64_t maxid = gmesh->CreateUniqueNodeId();
+      gmesh->NodeVec()[node].SetNodeId(maxid);
     }
   }
 }
@@ -268,4 +282,18 @@ REAL TPZWannGeometryTools::FindClosestX(const REAL x, const std::set<REAL> &node
   }
   DebugStop();
   return -1;
+}
+
+bool TPZWannGeometryTools::CheckXInSet(const REAL x, const std::set<REAL> &nodeCoordsX, const REAL tol) {
+  auto it = nodeCoordsX.lower_bound(x);
+  if (it != nodeCoordsX.end() && fabs(*it - x) <= tol) {
+    return true;
+  }
+  if (it != nodeCoordsX.begin()) {
+    --it;
+    if (fabs(*it - x) <= tol) {
+      return true;
+    }
+  }
+  return false;
 }
