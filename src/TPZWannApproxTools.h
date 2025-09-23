@@ -8,13 +8,14 @@
 #include <Material/TPZNullMaterial.h>
 #include <Material/TPZNullMaterialCS.h>
 #include <Mesh/pzintel.h>
+#include <TPZAnalyticSolution.h>
 #include <TPZHDivApproxCreator.h>
 #include <TPZMultiphysicsCompMesh.h>
 
 class TPZWannApproxTools {
 
 public:
-  static TPZMultiphysicsCompMesh *CreateMultiphysicsCompMesh(TPZGeoMesh *gmesh, ProblemData *SimData);
+  static TPZMultiphysicsCompMesh *CreateMultiphysicsCompMesh(TPZGeoMesh *gmesh, ProblemData *SimData, TPZAnalyticSolution *exactsol);
   static TPZCompMesh *CreateH1CompMesh(TPZGeoMesh *gmesh, ProblemData *SimData);
 
 private:
