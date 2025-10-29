@@ -15,7 +15,7 @@
 
 using namespace std;
 
-const int global_nthread = 0;
+const int global_nthread = 16;
 
 int main(int argc, char *argv[]) {
 
@@ -23,9 +23,7 @@ int main(int argc, char *argv[]) {
   exact.fDimension = 3;
   exact.fExact = TLaplaceExample1::ENone;
 
-  std::string jsonfile = "case_1.json";
-  jsonfile = "wann3d.json";
-  // jsonfile = "wann3d_test.json";
+  std::string jsonfile = "wann3d_test.json";
 
   if (argc > 2) {
     std::cout << argv[0] << " being called with too many arguments." << std::endl;
@@ -50,29 +48,38 @@ int main(int argc, char *argv[]) {
   TPZGeoMesh *gmesh = TPZWannGeometryTools::CreateGeoMesh(&SimData);
 
   // Refinement loop (experimental)
-  for (int refIt = 0; refIt < 1; refIt++) {
+  for (int refIt = 0; refIt < 3; refIt++) {
     TPZMultiphysicsCompMesh *cmesh = TPZWannApproxTools::CreateMultiphysicsCompMesh(gmesh, &SimData, &exact);
     TPZCompMesh *cmeshH1 = TPZWannApproxTools::CreateH1CompMesh(gmesh, &SimData);
 
-    // ---- Hdiv analysis ----
-    TPZLinearAnalysis analysis(cmesh);
+    // {
+    //   std::ofstream out("cmesh.txt");
+    //   cmesh->Print(out);
+    // }
+
+    if (refIt >= 0) {
+      // ---- Hdiv analysis ----
+      TPZLinearAnalysis analysis(cmesh);
 #ifdef PZ_USING_MKL
-    TPZSSpStructMatrix<STATE> skylstr(cmesh);
+      TPZSSpStructMatrix<STATE> skylstr(cmesh);
 #else
-    TPZSkylStrMatrix skylstr(cmesh);
+      TPZSkylStrMatrix skylstr(cmesh);
 #endif
-    skylstr.SetNumThreads(global_nthread);
-    analysis.SetStructuralMatrix(skylstr);
+      // TPZSkylStrMatrix skylstr(cmesh);
+      // TPZSkylineStructMatrix<STATE> skylstr(cmesh);
+      skylstr.SetNumThreads(global_nthread);
+      analysis.SetStructuralMatrix(skylstr);
 
-    TPZStepSolver<STATE> step;
-    step.SetDirect(ELDLt);
-    analysis.SetSolver(step);
-    analysis.Run();
+      TPZStepSolver<STATE> step;
+      step.SetDirect(ELDLt);
+      analysis.SetSolver(step);
+      analysis.Run();
 
-    {
-      std::ofstream out("solution.txt");
-      TPZFMatrix<REAL> &sol = analysis.Solution();
-      sol.Print("Solution", out, EMathematicaInput);
+      {
+        std::ofstream out("solution.txt");
+        TPZFMatrix<REAL> &sol = analysis.Solution();
+        sol.Print("Solution", out, EMathematicaInput);
+      }
     }
 
     // if (refIt == 1) {
@@ -164,7 +171,7 @@ int main(int argc, char *argv[]) {
 
     TPZWannEstimationTools::EstimateAndRefine(cmesh, cmeshH1, &SimData, global_nthread);
 
-    std::cout << "--------- Estimate and refine finished ---------" << std::endl;
+    std::cout << "\n--------- Estimate and refine finished ---------" << std::endl;
 
     delete cmesh;
     delete cmeshH1;
