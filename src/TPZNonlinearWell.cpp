@@ -14,17 +14,10 @@ static TPZLogger logger("pz.material.darcy");
 #define USEBLAS
 
 TPZNonlinearWell::TPZNonlinearWell() : TPZRegisterClassId(&TPZNonlinearWell::ClassId),
-                                       TBase(),
-                                       fDim(-1) {}
+                                       TBase(), fDim(-1) {}
 
 [[maybe_unused]] TPZNonlinearWell::TPZNonlinearWell(int id, REAL Dw, REAL mu, REAL rho, REAL pres, REAL Kvw) : TPZRegisterClassId(&TPZNonlinearWell::ClassId),
-                                                                                                               TBase(id),
-                                                                                                               fDim(1),
-                                                                                                               fDw(Dw),
-                                                                                                               fMu(mu),
-                                                                                                               fRho(rho),
-                                                                                                               fPres(pres),
-                                                                                                               fKvw(Kvw) {
+                                                                                                               TBase(id), fDim(1), fDw(Dw), fMu(mu), fRho(rho), fPres(pres), fKvw(Kvw) {
   REAL c = (2.252610888 * pow(fDw, 19. / 7.)) / (pow(fMu, 1. / 7.) * pow(fRho, 3. / 7.));
   fC = pow(c, -7. / 4.);
 }
