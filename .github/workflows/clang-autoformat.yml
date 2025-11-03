@@ -53,8 +53,11 @@ jobs:
       - name: Detect changes
         id: git-detect-changes
         run: |
-          git diff --quiet
-          echo "changes=$?" >> $GITHUB_OUTPUT
+          if git diff --quiet; then
+            echo "changes=0" >> $GITHUB_OUTPUT
+          else
+            echo "changes=1" >> $GITHUB_OUTPUT
+          fi
 
       - name: Amend changes if formatting was applied
         id: amend-changes
