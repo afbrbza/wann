@@ -50,6 +50,9 @@ jobs:
           extensions: c,h,cpp,hpp
           clang-version: latest
 
+      - name: Fix .git owner
+        run: sudo chown runner:docker -R .git
+
       - name: Detect changes
         id: git-detect-changes
         run: |
