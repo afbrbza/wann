@@ -1,0 +1,72 @@
+name: Clang autoformat
+
+on:
+  push:
+    branches:
+      - '*'
+  # pull_request:
+  #   branches:
+  #     - '*'
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+          fetch-depth: 2 # To compare with the previous commit
+
+      - name: Prevent loop by suffix commit message
+        id: check-commit-message
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "Commit message: $COMMIT_MESSAGE"
+          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+          if ${COMMIT_MESSAGE} | grep -q "\[fmt auto\]"; then
+            echo "Autoformat commit detected. Exiting to prevent loop."
+            exit 1
+          fi
+
+      - name: Get original author info
+        id: author_info
+        run: |
+          AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          echo "author_name=$AUTHOR_NAME" >> $GITHUB_OUTPUT
+          echo "author_email=$AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+
+      - name: Format code with clang-format
+        uses: jayllyz/clang-format-action@main
+        with:
+          check: false
+          style: file
+          extensions: c,h,cpp,hpp
+          clang-version: latest
+
+      - name: Detect changes
+        id: git-detect-changes
+        run: |
+          git diff --quiet
+          echo "changes=$?" >> $GITHUB_OUTPUT
+
+      - name: Amend changes if formatting was applied
+        id: amend-changes
+        if: ${{steps.git-detect-changes.outputs.changes != '0'}}
+        run: |
+          git config user.name "${{ steps.author_info.outputs.author_name }}"
+          git config user.email "${{ steps.author_info.outputs.author_email }}"
+          git add .
+          git commit --amend --no-edit -m "${{ steps.check-commit-message.outputs.commit_message }} [fmt auto]" --author="${{ steps.author_info.outputs.author_name }} <${{ steps.author_info.outputs.author_email }}>"
+          git push --force-with-lease origin HEAD:${{ github.ref }}
+
+      - name: Notify if no changes were made
+        if: ${{steps.git-detect-changes.outputs.changes == '0'}}
+        run: |
+          echo "No changes were made."
