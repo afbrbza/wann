@@ -9,8 +9,7 @@
 using namespace std;
 
 // constructor
-ProblemData::ProblemData() : m_VerbosityLevel(0)
-{
+ProblemData::ProblemData() : m_VerbosityLevel(0) {
   m_Wellbore.eccentricity.resize(3);
   m_Wellbore.BCs.reserve(2);
   m_Reservoir.BCs.reserve(3);
@@ -20,8 +19,7 @@ ProblemData::ProblemData() : m_VerbosityLevel(0)
 ProblemData::~ProblemData() {}
 
 // readjson function. takes a json function as parameter and completes the required simulation data
-void ProblemData::ReadJson(std::string file)
-{
+void ProblemData::ReadJson(std::string file) {
   std::string path(std::string(INPUTDIR) + "/" + file);
   std::ifstream filejson(path);
   json input = json::parse(filejson, nullptr, true, true); // to ignore comments in json file
