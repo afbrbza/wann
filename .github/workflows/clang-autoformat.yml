@@ -1,17 +1,13 @@
-name: Clang autoformat
+name: "Clang autoformat"
 
 on:
   push:
     branches:
       - '*'
-  # pull_request:
-  #   branches:
-  #     - '*'
 
 jobs:
   format:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
 
@@ -21,17 +17,26 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: ${{ github.ref }}
-          fetch-depth: 2 # To compare with the previous commit
+          fetch-depth: 0       # usar zero para histórico completo
 
-      - name: Prevent loop by suffix commit message
+      - name: Prevent Bot Loop (via actor)
+        id: check-actor
+        run: |
+          echo "Actor: ${{ github.actor }}"
+          if [ "${{ github.actor }}" = "github-actions[bot]" ]; then
+            echo "Triggered by bot — exiting to prevent loop."
+            exit 0
+          fi
+
+      - name: Prevent Bot Loop (via commit message suffix)
         id: check-commit-message
         run: |
           COMMIT_MESSAGE=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MESSAGE"
           echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
-          if ${COMMIT_MESSAGE} | grep -q "\[fmt auto\]"; then
-            echo "Autoformat commit detected. Exiting to prevent loop."
-            exit 1
+          if echo "$COMMIT_MESSAGE" | grep -q "\[fmt auto\]"; then
+            echo "Autoformat tag detected in commit message — exiting."
+            exit 0
           fi
 
       - name: Get original author info
@@ -51,7 +56,9 @@ jobs:
           clang-version: latest
 
       - name: Fix .git owner
-        run: sudo chown runner:docker -R .git
+        run: |
+          sudo chown -R $(whoami) .git
+          sudo chmod -R u+rwX .git
 
       - name: Detect changes
         id: git-detect-changes
@@ -63,8 +70,7 @@ jobs:
           fi
 
       - name: Amend changes if formatting was applied
-        id: amend-changes
-        if: ${{steps.git-detect-changes.outputs.changes != '0'}}
+        if: ${{ steps.git-detect-changes.outputs.changes == '1' }}
         run: |
           git config user.name "${{ steps.author_info.outputs.author_name }}"
           git config user.email "${{ steps.author_info.outputs.author_email }}"
@@ -73,6 +79,6 @@ jobs:
           git push --force-with-lease origin HEAD:${{ github.ref }}
 
       - name: Notify if no changes were made
-        if: ${{steps.git-detect-changes.outputs.changes == '0'}}
+        if: ${{ steps.git-detect-changes.outputs.changes == '0' }}
         run: |
-          echo "No changes were made."
+          echo "No formatting changes were made - nothing to amend."
