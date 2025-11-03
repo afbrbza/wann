@@ -12,7 +12,8 @@
 // declaration of simulation data class.
 // all the data herein used are storaged in a .json file. It can be called and storaged using ReadJson
 
-class ProblemData {
+class ProblemData
+{
   struct BoundaryData {
     int matid = -1; // bc material ID
     int type;       // bc type 0: direct, 1: neumann

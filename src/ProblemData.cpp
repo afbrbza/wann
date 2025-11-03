@@ -20,7 +20,8 @@ ProblemData::ProblemData() : m_VerbosityLevel(0)
 ProblemData::~ProblemData() {}
 
 // readjson function. takes a json function as parameter and completes the required simulation data
-void ProblemData::ReadJson(std::string file) {
+void ProblemData::ReadJson(std::string file)
+{
   std::string path(std::string(INPUTDIR) + "/" + file);
   std::ifstream filejson(path);
   json input = json::parse(filejson, nullptr, true, true); // to ignore comments in json file
